@@ -54,3 +54,18 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <!-- Firebase Authentication -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<div id="authForms">
+
+  <h2>Register</h2>
+  <input type="email" id="registerEmail" placeholder="Email" />
+  <input type="password" id="registerPassword" placeholder="Password" />
+  <button onclick="signUp(document.getElementById('registerEmail').value, document.getElementById('registerPassword').value)">Register</button>
+
+  <h2>Login</h2>
+  <input type="email" id="loginEmail" placeholder="Email" />
+  <input type="password" id="loginPassword" placeholder="Password" />
+  <button onclick="signIn(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)">Login</button>
+
+  <button onclick="signOutUser()">Logout</button>
+
+</div>
