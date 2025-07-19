@@ -269,16 +269,17 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
 // Sign up function
-function signUp(email, password) {
-  auth.createUserWithEmailAndPassword(email, password)
+function signIn(email, password) {
+  auth.signInWithEmailAndPassword(email, password)
     .then(userCredential => {
-      alert("User registered successfully!");
-      // You can redirect or update UI here
+      alert("User signed in successfully!");
+      window.location.href = "dashboard.html";  // Redirect to account page
     })
     .catch(error => {
       alert(error.message);
     });
 }
+
 
 // Sign in function
 function signIn(email, password) {
