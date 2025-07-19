@@ -42,3 +42,38 @@ header {
 .card p {
   margin: 5px 0;
 }
+.submission-form {
+  background: white;
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.submission-form h2 {
+  text-align: center;
+}
+.submission-form form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.submission-form input, .submission-form select, .submission-form button {
+  padding: 10px;
+  font-size: 1rem;
+}
+.submission-form input, .submission-form select {
+  flex: 1 1 40%;
+  min-width: 120px;
+}
+.submission-form button {
+  flex: 1 1 100%;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+.submission-form button:hover {
+  background-color: #45a049;
+}
