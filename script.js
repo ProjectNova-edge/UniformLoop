@@ -309,3 +309,26 @@ function signOutUser() {
       // Update UI
     });
 }
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
+    authDomain: "schooluniformsapp.firebaseapp.com",
+    projectId: "schooluniformsapp",
+    storageBucket: "schooluniformsapp.firebasestorage.app",
+    messagingSenderId: "660528209566",
+    appId: "1:660528209566:web:5c19e23b57ce2b8039258f",
+    measurementId: "G-7W5EPT691T"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
