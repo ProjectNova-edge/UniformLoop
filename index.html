@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>UniformLoop</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header>
@@ -28,87 +27,91 @@
 
   <div id="listings" class="listings"></div>
 
+  <div class="submission-form">
+    <h2>Submit a Listing</h2>
+    <form id="listingForm">
+      <input type="text" id="schoolInput" placeholder="School Name" required />
+      <select id="itemInput" required>
+        <option value="">Select Item Type</option>
+        <option value="Shirt">Shirt</option>
+        <option value="Skirt">Skirt</option>
+        <option value="Pants">Pants</option>
+        <option value="Blazer">Blazer</option>
+        <option value="Bag">Bag</option>
+        <option value="Books">Books</option>
+      </select>
+      <input type="text" id="sizeInput" placeholder="Size" required />
+      <input type="text" id="conditionInput" placeholder="Condition" required />
+      <input type="text" id="priceInput" placeholder="Price (or Free)" required />
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <section class="auth-section">
+    <h2>Register</h2>
+    <input type="email" id="registerEmail" placeholder="Email" />
+    <input type="password" id="registerPassword" placeholder="Password" />
+    <button onclick="signUp(document.getElementById('registerEmail').value, document.getElementById('registerPassword').value)">Register</button>
+
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button onclick="signIn(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)">Login</button>
+
+    <button onclick="signOutUser()">Logout</button>
+  </section>
+
   <script src="script.js"></script>
+
+  <!-- Firebase SDKs and Auth -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
+      authDomain: "schooluniformsapp.firebaseapp.com",
+      projectId: "schooluniformsapp",
+      storageBucket: "schooluniformsapp.appspot.com",
+      messagingSenderId: "660528209566",
+      appId: "1:660528209566:web:5c19e23b57ce2b8039258f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.signUp = function(email, password) {
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(userCredential => {
+          alert("User registered successfully!");
+        })
+        .catch(error => {
+          alert(error.message);
+        });
+    };
+
+    window.signIn = function(email, password) {
+      signInWithEmailAndPassword(auth, email, password)
+        .then(userCredential => {
+          alert("User signed in successfully!");
+          // Redirect to dashboard page after successful login
+          window.location.href = "dashboard.html";  // ensure this file exists
+        })
+        .catch(error => {
+          alert(error.message);
+        });
+    };
+
+    window.signOutUser = function() {
+      signOut(auth)
+        .then(() => {
+          alert("User signed out!");
+          window.location.href = "index.html";  // redirect to homepage after logout
+        })
+        .catch(error => {
+          alert(error.message);
+        });
+    };
+  </script>
 </body>
 </html>
-<div class="submission-form">
-  <h2>Submit a Listing</h2>
-  <form id="listingForm">
-    <input type="text" id="schoolInput" placeholder="School Name" required />
-    <select id="itemInput" required>
-      <option value="">Select Item Type</option>
-      <option value="Shirt">Shirt</option>
-      <option value="Skirt">Skirt</option>
-      <option value="Pants">Pants</option>
-      <option value="Blazer">Blazer</option>
-      <option value="Bag">Bag</option>
-      <option value="Books">Books</option>
-    </select>
-    <input type="text" id="sizeInput" placeholder="Size" required />
-    <input type="text" id="conditionInput" placeholder="Condition" required />
-    <input type="text" id="priceInput" placeholder="Price (or Free)" required />
-    <button type="submit">Submit</button>
-  </form>
-</div>
-<!-- Firebase App (the core Firebase SDK) -->
-  <h2>Register</h2>
-  <input type="email" id="registerEmail" placeholder="Email" />
-  <input type="password" id="registerPassword" placeholder="Password" />
-  <button onclick="signUp(document.getElementById('registerEmail').value, document.getElementById('registerPassword').value)">Register</button>
-
-  <h2>Login</h2>
-  <input type="email" id="loginEmail" placeholder="Email" />
-  <input type="password" id="loginPassword" placeholder="Password" />
-  <button onclick="signIn(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)">Login</button>
-
-  <button onclick="signOutUser()">Logout</button>
-
-</div>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
-    authDomain: "schooluniformsapp.firebaseapp.com",
-    projectId: "schooluniformsapp",
-    storageBucket: "schooluniformsapp.appspot.com",
-    messagingSenderId: "660528209566",
-    appId: "1:660528209566:web:5c19e23b57ce2b8039258f"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  window.signUp = function(email, password) {
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
-        alert("User registered successfully!");
-      })
-      .catch(error => {
-        alert(error.message);
-      });
-  };
-
-  window.signIn = function(email, password) {
-  signInWithEmailAndPassword(auth, email, password)
-    .then(userCredential => {
-      alert("User signed in successfully!");
-      // Redirect to dashboard page after successful login
-      window.location.href = "dashboard.html";  // make sure dashboard.html exists in your project
-    })
-    .catch(error => {
-      alert(error.message);
-    });
-</script>
-function signIn(email, password) {
-  auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      alert("User signed in successfully!");
-      // Redirect to dashboard after login
-      window.location.href = "dashboard.html"; // or whatever your dashboard page is named
-    })
-    .catch(error => {
-      alert(error.message);
-    });
-}
