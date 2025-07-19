@@ -323,3 +323,14 @@ function signOutUser() {
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
 </script>
+// Inside your form submit event
+const user = firebase.auth().currentUser;
+
+const newListing = {
+  school: document.getElementById('schoolInput').value.trim(),
+  item: document.getElementById('itemInput').value,
+  size: document.getElementById('sizeInput').value.trim(),
+  condition: document.getElementById('conditionInput').value.trim(),
+  price: document.getElementById('priceInput').value.trim(),
+  userId: user ? user.uid : null, // attach user ID to listing
+};
