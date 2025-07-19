@@ -91,20 +91,15 @@
   };
 
   window.signIn = function(email, password) {
-    signInWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
-        alert("User signed in successfully!");
-      })
-      .catch(error => {
-        alert(error.message);
-      });
-  };
-
-  window.signOutUser = function() {
-    signOut(auth).then(() => {
-      alert("User signed out!");
+  signInWithEmailAndPassword(auth, email, password)
+    .then(userCredential => {
+      alert("User signed in successfully!");
+      // Redirect to dashboard page after successful login
+      window.location.href = "dashboard.html";  // make sure dashboard.html exists in your project
+    })
+    .catch(error => {
+      alert(error.message);
     });
-  };
 </script>
 function signIn(email, password) {
   auth.signInWithEmailAndPassword(email, password)
