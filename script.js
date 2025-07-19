@@ -261,3 +261,51 @@ const australianSchools = [
   "Western Grammar School",
   "AICS"
 ];
+// Your Firebase config — get this from your Firebase Console > Project settings > General > Your apps > Firebase SDK snippet
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Reference to Firebase Auth service
+const auth = firebase.auth();
+
+// Sign up function
+function signUp(email, password) {
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(userCredential => {
+      alert("User registered successfully!");
+      // You can redirect or update UI here
+    })
+    .catch(error => {
+      alert(error.message);
+    });
+}
+
+// Sign in function
+function signIn(email, password) {
+  auth.signInWithEmailAndPassword(email, password)
+    .then(userCredential => {
+      alert("User signed in successfully!");
+      // Update UI or redirect
+    })
+    .catch(error => {
+      alert(error.message);
+    });
+}
+
+// Sign out function
+function signOutUser() {
+  auth.signOut()
+    .then(() => {
+      alert("User signed out!");
+      // Update UI
+    });
+}
