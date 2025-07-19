@@ -2,12 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>My Account</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .card {
+      border: 1px solid #ccc;
+      padding: 1em;
+      margin-bottom: 1em;
+      border-radius: 8px;
+    }
+    button {
+      margin-right: 0.5em;
+    }
+  </style>
 </head>
 <body>
   <h1>Welcome to Your Dashboard</h1>
-  <button onclick="signOutUser()">Logout</button>
+  <button id="logoutBtn">Logout</button>
 
   <h2>Your Listings</h2>
   <div id="userListings"></div>
@@ -28,40 +40,83 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Example localStorage mock data. Replace with real backend later.
-    const sampleListings = JSON.parse(localStorage.getItem("listings")) || [];
+    const listingsKey = "listings";
 
+    function loadListings() {
+      const data = localStorage.getItem(listingsKey);
+      return data ? JSON.parse(data) : [];
+    }
+
+    function saveListings(listings) {
+      localStorage.setItem(listingsKey, JSON.stringify(listings));
+    }
+
+    function renderListings(userId) {
+      const allListings = loadListings();
+      const userListings = allListings.filter(l => l.userId === userId);
+      const container = document.getElementById("userListings");
+      container.innerHTML = "";
+
+      if (userListings.length === 0) {
+        container.innerHTML = "<p>You have no listings yet.</p>";
+        return;
+      }
+
+      userListings.forEach((listing, index) => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <h3>${listing.item}</h3>
+          <p><strong>School:</strong> ${listing.school}</p>
+          <p><strong>Size:</strong> ${listing.size}</p>
+          <p><strong>Condition:</strong> ${listing.condition}</p>
+          <p><strong>Price:</strong> ${listing.price}</p>
+          <button class="deleteBtn" data-index="${index}">Delete</button>
+        `;
+        container.appendChild(div);
+      });
+
+      // Delete handler
+      const deleteButtons = document.querySelectorAll(".deleteBtn");
+      deleteButtons.forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          const all = loadListings();
+          const userListings = all.filter(l => l.userId === userId);
+          const toDelete = userListings[i];
+
+          const targetIndex = all.findIndex(l =>
+            l.userId === toDelete.userId &&
+            l.school === toDelete.school &&
+            l.item === toDelete.item &&
+            l.size === toDelete.size &&
+            l.condition === toDelete.condition &&
+            l.price === toDelete.price
+          );
+
+          if (targetIndex !== -1) {
+            all.splice(targetIndex, 1);
+            saveListings(all);
+            renderListings(userId);
+          }
+        });
+      });
+    }
+
+    // Auth check and render
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        const userListings = sampleListings.filter(item => item.userId === user.uid);
-        const container = document.getElementById("userListings");
-        if (userListings.length === 0) {
-          container.innerHTML = "<p>No listings yet.</p>";
-        } else {
-          userListings.forEach(listing => {
-            const div = document.createElement("div");
-            div.className = "card";
-            div.innerHTML = `
-              <h3>${listing.item}</h3>
-              <p><strong>School:</strong> ${listing.school}</p>
-              <p><strong>Size:</strong> ${listing.size}</p>
-              <p><strong>Condition:</strong> ${listing.condition}</p>
-              <p><strong>Price:</strong> ${listing.price}</p>
-              <button>Edit</button> <button>Delete</button>
-            `;
-            container.appendChild(div);
-          });
-        }
+        renderListings(user.uid);
       } else {
-        window.location.href = "index.html"; // redirect if not logged in
+        window.location.href = "index.html";
       }
     });
 
-    window.signOutUser = function() {
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
-    };
+    });
   </script>
 </body>
 </html>
