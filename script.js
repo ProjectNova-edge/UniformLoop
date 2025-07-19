@@ -38,3 +38,22 @@ search.addEventListener("input", renderListings);
 filterType.addEventListener("change", renderListings);
 
 renderListings();
+const form = document.getElementById('listingForm');
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const newListing = {
+    school: document.getElementById('schoolInput').value.trim(),
+    item: document.getElementById('itemInput').value,
+    size: document.getElementById('sizeInput').value.trim(),
+    condition: document.getElementById('conditionInput').value.trim(),
+    price: document.getElementById('priceInput').value.trim(),
+  };
+
+  listings.push(newListing);
+
+  renderListings();
+
+  form.reset();
+});
