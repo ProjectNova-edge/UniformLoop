@@ -22,7 +22,7 @@
     <input type="text" id="locationInput" placeholder="Location" required />
     <input type="text" id="priceInput" placeholder="Price (or Free)" required />
     <textarea id="extraInput" placeholder="Extra Details (optional)"></textarea>
-    <input type="file" id="photoInput" accept="image/*" required />
+    <input type="file" id="photoInput" accept="image/*" multiple required />
     <button type="submit">Submit Listing</button>
   </form>
 
@@ -32,7 +32,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
@@ -65,17 +65,23 @@
     form.addEventListener("submit", async function (e) {
       e.preventDefault();
 
-      const photoFile = document.getElementById("photoInput").files[0];
-      if (!photoFile) {
-        alert("Please select a photo.");
+      const files = document.getElementById("photoInput").files;
+      if (!files.length || files.length > 5) {
+        alert("Please select 1 to 5 photos.");
         return;
       }
 
-      const photoRef = storageRef(storage, `photos/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
-      const snapshot = await uploadBytes(photoRef, photoFile);
-      const photoURL = await getDownloadURL(snapshot.ref);
+      const photoURLs = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const photoRef = storageRef(storage, `photos/${currentUser.uid}/${Date.now()}_${files[i].name}`);
+        const snapshot = await uploadBytes(photoRef, files[i]);
+        const url = await getDownloadURL(snapshot.ref);
+        photoURLs.push(url);
+      }
 
       const newListing = {
+        id: Date.now(),
         userId: currentUser.uid,
         school: document.getElementById("schoolInput").value.trim(),
         size: document.getElementById("sizeInput").value.trim(),
@@ -83,7 +89,7 @@
         location: document.getElementById("locationInput").value.trim(),
         price: document.getElementById("priceInput").value.trim(),
         extra: document.getElementById("extraInput").value.trim(),
-        photoURL: photoURL
+        photoURLs
       };
 
       allListings.push(newListing);
@@ -105,17 +111,39 @@
         const div = document.createElement("div");
         div.className = "card";
         div.innerHTML = `
-          <img src="${listing.photoURL}" alt="Item photo" style="max-width:200px;" />
+          ${listing.photoURLs.map(url => `<img src="${url}" alt="Item photo" style="max-width:150px;" />`).join('')}
           <h3>${listing.school}</h3>
           <p><strong>Size:</strong> ${listing.size}</p>
           <p><strong>Gender:</strong> ${listing.gender}</p>
           <p><strong>Location:</strong> ${listing.location}</p>
           <p><strong>Price:</strong> ${listing.price}</p>
           ${listing.extra ? `<p><strong>Extra:</strong> ${listing.extra}</p>` : ""}
+          <button onclick="editListing(${listing.id})">Edit</button>
+          <button onclick="deleteListing(${listing.id})">Delete</button>
         `;
         container.appendChild(div);
       });
     }
+
+    window.deleteListing = function(id) {
+      allListings = allListings.filter(item => item.id !== id);
+      localStorage.setItem("listings", JSON.stringify(allListings));
+      renderListings();
+    };
+
+    window.editListing = function(id) {
+      const listing = allListings.find(item => item.id === id);
+      if (listing) {
+        document.getElementById("schoolInput").value = listing.school;
+        document.getElementById("sizeInput").value = listing.size;
+        document.getElementById("genderInput").value = listing.gender;
+        document.getElementById("locationInput").value = listing.location;
+        document.getElementById("priceInput").value = listing.price;
+        document.getElementById("extraInput").value = listing.extra;
+        deleteListing(id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
 
     window.signOutUser = function () {
       signOut(auth).then(() => {
