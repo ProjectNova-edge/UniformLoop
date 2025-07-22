@@ -2,24 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>My Account</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    .card {
-      border: 1px solid #ccc;
-      padding: 1em;
-      margin-bottom: 1em;
-      border-radius: 8px;
-    }
-    button {
-      margin-right: 0.5em;
-    }
-  </style>
 </head>
 <body>
   <h1>Welcome to Your Dashboard</h1>
-  <button id="logoutBtn">Logout</button>
+  <button onclick="signOutUser()">Logout</button>
+
+  <h2>Post a New Listing</h2>
+  <form id="listingForm">
+    <input type="text" id="schoolInput" placeholder="School Name" required />
+    <input type="text" id="sizeInput" placeholder="Size" required />
+    <select id="genderInput" required>
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Unisex">Unisex</option>
+    </select>
+    <input type="text" id="locationInput" placeholder="Location" required />
+    <input type="text" id="priceInput" placeholder="Price (or Free)" required />
+    <textarea id="extraInput" placeholder="Extra Details (optional)"></textarea>
+    <input type="file" id="photoInput" accept="image/*" required />
+    <button type="submit">Submit Listing</button>
+  </form>
 
   <h2>Your Listings</h2>
   <div id="userListings"></div>
@@ -27,6 +32,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
@@ -39,84 +45,83 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const storage = getStorage(app);
 
-    const listingsKey = "listings";
+    let currentUser = null;
+    let allListings = JSON.parse(localStorage.getItem("listings")) || [];
 
-    function loadListings() {
-      const data = localStorage.getItem(listingsKey);
-      return data ? JSON.parse(data) : [];
-    }
+    const form = document.getElementById("listingForm");
+    const container = document.getElementById("userListings");
 
-    function saveListings(listings) {
-      localStorage.setItem(listingsKey, JSON.stringify(listings));
-    }
-
-    function renderListings(userId) {
-      const allListings = loadListings();
-      const userListings = allListings.filter(l => l.userId === userId);
-      const container = document.getElementById("userListings");
-      container.innerHTML = "";
-
-      if (userListings.length === 0) {
-        container.innerHTML = "<p>You have no listings yet.</p>";
-        return;
-      }
-
-      userListings.forEach((listing, index) => {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-          <h3>${listing.item}</h3>
-          <p><strong>School:</strong> ${listing.school}</p>
-          <p><strong>Size:</strong> ${listing.size}</p>
-          <p><strong>Condition:</strong> ${listing.condition}</p>
-          <p><strong>Price:</strong> ${listing.price}</p>
-          <button class="deleteBtn" data-index="${index}">Delete</button>
-        `;
-        container.appendChild(div);
-      });
-
-      // Delete handler
-      const deleteButtons = document.querySelectorAll(".deleteBtn");
-      deleteButtons.forEach((btn, i) => {
-        btn.addEventListener("click", () => {
-          const all = loadListings();
-          const userListings = all.filter(l => l.userId === userId);
-          const toDelete = userListings[i];
-
-          const targetIndex = all.findIndex(l =>
-            l.userId === toDelete.userId &&
-            l.school === toDelete.school &&
-            l.item === toDelete.item &&
-            l.size === toDelete.size &&
-            l.condition === toDelete.condition &&
-            l.price === toDelete.price
-          );
-
-          if (targetIndex !== -1) {
-            all.splice(targetIndex, 1);
-            saveListings(all);
-            renderListings(userId);
-          }
-        });
-      });
-    }
-
-    // Auth check and render
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        renderListings(user.uid);
+        currentUser = user;
+        renderListings();
       } else {
         window.location.href = "index.html";
       }
     });
 
-    // Logout
-    document.getElementById("logoutBtn").addEventListener("click", () => {
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const photoFile = document.getElementById("photoInput").files[0];
+      if (!photoFile) {
+        alert("Please select a photo.");
+        return;
+      }
+
+      const photoRef = storageRef(storage, `photos/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
+      const snapshot = await uploadBytes(photoRef, photoFile);
+      const photoURL = await getDownloadURL(snapshot.ref);
+
+      const newListing = {
+        userId: currentUser.uid,
+        school: document.getElementById("schoolInput").value.trim(),
+        size: document.getElementById("sizeInput").value.trim(),
+        gender: document.getElementById("genderInput").value,
+        location: document.getElementById("locationInput").value.trim(),
+        price: document.getElementById("priceInput").value.trim(),
+        extra: document.getElementById("extraInput").value.trim(),
+        photoURL: photoURL
+      };
+
+      allListings.push(newListing);
+      localStorage.setItem("listings", JSON.stringify(allListings));
+      renderListings();
+      form.reset();
+    });
+
+    function renderListings() {
+      container.innerHTML = "";
+      const userListings = allListings.filter(listing => listing.userId === currentUser.uid);
+
+      if (userListings.length === 0) {
+        container.innerHTML = "<p>No listings yet.</p>";
+        return;
+      }
+
+      userListings.forEach(listing => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <img src="${listing.photoURL}" alt="Item photo" style="max-width:200px;" />
+          <h3>${listing.school}</h3>
+          <p><strong>Size:</strong> ${listing.size}</p>
+          <p><strong>Gender:</strong> ${listing.gender}</p>
+          <p><strong>Location:</strong> ${listing.location}</p>
+          <p><strong>Price:</strong> ${listing.price}</p>
+          ${listing.extra ? `<p><strong>Extra:</strong> ${listing.extra}</p>` : ""}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    window.signOutUser = function () {
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
-    });
+    };
   </script>
 </body>
 </html>
