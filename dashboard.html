@@ -37,6 +37,16 @@
       margin-right: 6px;
       margin-top: 6px;
     }
+    label {
+      display: block;
+      margin-top: 8px;
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+    }
   </style>
 </head>
 <body>
@@ -45,11 +55,25 @@
 
   <h2>Submit a New Listing</h2>
   <form id="listingForm">
+    <label for="schoolInput">School Name (required)</label>
     <input type="text" id="schoolInput" placeholder="School Name" required />
+
+    <label for="itemInput">Item (required)</label>
+    <input type="text" id="itemInput" placeholder="Item (e.g., Blazer)" required />
+
+    <label for="sizeInput">Size (required)</label>
     <input type="text" id="sizeInput" placeholder="Size" required />
+
+    <label for="genderInput">Gender (optional)</label>
     <input type="text" id="genderInput" placeholder="Gender (optional)" />
+
+    <label for="locationInput">Location (optional)</label>
     <input type="text" id="locationInput" placeholder="Location (optional)" />
+
+    <label for="priceInput">Price or Free (required)</label>
     <input type="text" id="priceInput" placeholder="Price or Free" required />
+
+    <label for="extraDetailsInput">Extra Details (optional)</label>
     <textarea id="extraDetailsInput" placeholder="Extra Details (optional)"></textarea>
     
     <button type="button" id="upload_widget_opener">Upload Photos (up to 5)</button>
@@ -153,6 +177,7 @@
 
         div.innerHTML = `
           <h3>${listing.school}</h3>
+          <p><strong>Item:</strong> ${listing.item || 'N/A'}</p>
           <p><strong>Size:</strong> ${listing.size}</p>
           <p><strong>Gender:</strong> ${listing.gender || 'N/A'}</p>
           <p><strong>Location:</strong> ${listing.location || 'N/A'}</p>
@@ -206,7 +231,7 @@
       loadUserListings(user.uid);
     }
 
-    // Edit listing - simple implementation: loads listing into form and deletes old
+    // Edit listing - loads listing into form and deletes old one
     function editListing(index) {
       const user = auth.currentUser;
       if(!user) return alert("User not authenticated.");
@@ -220,6 +245,7 @@
 
       // Fill form with existing data
       document.getElementById('schoolInput').value = listingToEdit.school;
+      document.getElementById('itemInput').value = listingToEdit.item || '';
       document.getElementById('sizeInput').value = listingToEdit.size;
       document.getElementById('genderInput').value = listingToEdit.gender || '';
       document.getElementById('locationInput').value = listingToEdit.location || '';
@@ -228,7 +254,7 @@
       uploadedImages = listingToEdit.photos || [];
       displayUploadedImages();
 
-      // Delete old listing so that new submit updates it
+      // Delete old listing so new submit updates it
       deleteListing(index);
     }
 
@@ -239,12 +265,24 @@
       const user = auth.currentUser;
       if(!user) return alert("User not authenticated.");
 
+      // Basic validation check for required fields
+      const school = document.getElementById('schoolInput').value.trim();
+      const item = document.getElementById('itemInput').value.trim();
+      const size = document.getElementById('sizeInput').value.trim();
+      const price = document.getElementById('priceInput').value.trim();
+
+      if (!school || !item || !size || !price) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
       const newListing = {
-        school: document.getElementById('schoolInput').value.trim(),
-        size: document.getElementById('sizeInput').value.trim(),
+        school,
+        item,
+        size,
         gender: document.getElementById('genderInput').value.trim(),
         location: document.getElementById('locationInput').value.trim(),
-        price: document.getElementById('priceInput').value.trim(),
+        price,
         extraDetails: document.getElementById('extraDetailsInput').value.trim(),
         photos: uploadedImages,
         userId: user.uid,
