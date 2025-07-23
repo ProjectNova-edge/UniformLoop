@@ -1,337 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Account</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .preview-img { width: 100px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Your Dashboard</h1>
+  <button onclick="signOutUser()">Logout</button>
 
-const listings = [
-  { school: "Sydney High School", item: "Blazer", size: "M", condition: "Good", price: "Free" },
-  { school: "Melbourne Grammar", item: "Bag", size: "-", condition: "Like New", price: "$10" },
-  { school: "Parramatta Public", item: "Books", size: "-", condition: "Used", price: "Free" },
-  { school: "Sydney High School", item: "Shirt", size: "L", condition: "Used", price: "$5" },
-];
+  <h2>Submit New Listing</h2>
+  <form id="listingForm">
+    <input type="text" id="schoolInput" placeholder="School Name" required />
+    <input type="text" id="sizeInput" placeholder="Size" required />
+    <select id="genderInput" required>
+      <option value="">Select Gender</option>
+      <option value="Boys">Boys</option>
+      <option value="Girls">Girls</option>
+      <option value="Unisex">Unisex</option>
+    </select>
+    <input type="text" id="locationInput" placeholder="Location" required />
+    <input type="text" id="priceInput" placeholder="Price (or Free)" required />
+    <textarea id="extraInput" placeholder="Extra details (optional)"></textarea>
 
-const container = document.getElementById("listings");
-const search = document.getElementById("search");
-const filterType = document.getElementById("filterType");
+    <label>Upload up to 5 photos:</label>
+    <input type="file" id="photosInput" accept="image/*" multiple max="5" />
+    <div id="photoPreviews"></div>
 
-function renderListings() {
-  const keyword = search.value.toLowerCase();
-  const filter = filterType.value;
-  container.innerHTML = "";
+    <button type="submit">Submit Listing</button>
+  </form>
 
-  listings
-    .filter(listing =>
-      listing.school.toLowerCase().includes(keyword) &&
-      (filter === "" || listing.item === filter)
-    )
-    .forEach(listing => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <h3>${listing.item}</h3>
-        <p><strong>School:</strong> ${listing.school}</p>
-        <p><strong>Size:</strong> ${listing.size}</p>
-        <p><strong>Condition:</strong> ${listing.condition}</p>
-        <p><strong>Price:</strong> ${listing.price}</p>
-      `;
-      container.appendChild(div);
+  <h2>Your Listings</h2>
+  <div id="userListings"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+      projectId: "YOUR_FIREBASE_PROJECT_ID",
+      storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
+      appId: "YOUR_FIREBASE_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Replace with your cloudinary details:
+    const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/upload";
+    const UPLOAD_PRESET = "YOUR_UNSIGNED_UPLOAD_PRESET";
+
+    let currentUser = null;
+    let listings = JSON.parse(localStorage.getItem("listings")) || [];
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        renderUserListings();
+      } else {
+        window.location.href = "index.html";
+      }
     });
-}
 
-search.addEventListener("input", renderListings);
-filterType.addEventListener("change", renderListings);
+    function renderUserListings() {
+      const container = document.getElementById("userListings");
+      container.innerHTML = "";
 
-renderListings();
-const form = document.getElementById('listingForm');
+      const userListings = listings.filter(item => item.userId === currentUser.uid);
+      if (userListings.length === 0) {
+        container.innerHTML = "<p>No listings yet.</p>";
+        return;
+      }
 
-form.addEventListener('submit', function(e) {
-  e.preventDefault();
+      userListings.forEach((listing, idx) => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <h3>${listing.school} (${listing.gender})</h3>
+          <p><strong>Size:</strong> ${listing.size}</p>
+          <p><strong>Location:</strong> ${listing.location}</p>
+          <p><strong>Price:</strong> ${listing.price}</p>
+          <p><strong>Extra details:</strong> ${listing.extra || "None"}</p>
+          <div>${listing.photos.map(url => `<img src="${url}" class="preview-img" />`).join('')}</div>
+          <button onclick="editListing(${idx})">Edit</button>
+          <button onclick="deleteListing(${idx})">Delete</button>
+        `;
+        container.appendChild(div);
+      });
+    }
 
-  const newListing = {
-    school: document.getElementById('schoolInput').value.trim(),
-    item: document.getElementById('itemInput').value,
-    size: document.getElementById('sizeInput').value.trim(),
-    condition: document.getElementById('conditionInput').value.trim(),
-    price: document.getElementById('priceInput').value.trim(),
-  };
+    async function uploadPhoto(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", UPLOAD_PRESET);
 
-  listings.push(newListing);
+      const response = await fetch(CLOUDINARY_URL, {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json();
+      return data.secure_url;
+    }
 
-  renderListings();
-
-  form.reset();
-});
-const australianSchools = [
-  // NSW Public and Selective Schools
-  "Sydney High School",
-  "Parramatta Public School",
-  "Newtown High School of the Performing Arts",
-  "North Sydney Girls High School",
-  "Hornsby Girls High School",
-  "Baulkham Hills High School",
-  "James Ruse Agricultural High School",
-  "Fort Street High School",
-  "Penrith High School",
-  "Ryde Secondary College",
-  "Manly Selective Campus",
-  "Gosford High School",
-  "Hurlstone Agricultural High School",
-  "The King's School",
-  "St George Girls High School",
-  "Cheltenham Girls High School",
-  "Normanhurst Boys High School",
-  "Cumberland High School",
-  "Granville Boys High School",
-  "Granville South Creative and Performing Arts High School",
-  "Bankstown Girls High School",
-  "Canterbury Boys High School",
-  "Epping Boys High School",
-  "Campsie Public School",
-  "Auburn Girls High School",
-  "Cabarita Public School",
-  "Bexley North Public School",
-  "Balmain High School",
-  "Albury High School",
-  "Alexandria Park Community School",
-  "Annandale Public School",
-  "Asquith Boys High School",
-  "Asquith Girls High School",
-  "Auburn Public School",
-  "Ballina High School",
-  "Belmore Boys High School",
-  "Belmore South Public School",
-  "Berowra Christian School",
-  "Berowra Public School",
-  "Blacktown Boys High School",
-  "Blacktown Girls High School",
-  "Blakehurst High School",
-  "Blaxland High School",
-  "Bourke High School",
-  "Braidwood Central School",
-  "Brisbane Water Secondary College",
-  "Burradoo Public School",
-  "Camden High School",
-  "Camden Public School",
-  "Campbelltown Performing Arts High School",
-  "Canley Vale High School",
-  "Carlingford High School",
-  "Castle Hill High School",
-  "Catherine McAuley Westmead",
-  "Chatswood High School",
-  "Cheltenham Girls High School",
-  "Cherrybrook Technology High School",
-  "Chifley College",
-  "Coffs Harbour High School",
-  "Concord High School",
-  "Coonabarabran High School",
-  "Corowa High School",
-  "Cronulla High School",
-  "Daceyville Public School",
-  "Davidson High School",
-  "Deniliquin High School",
-  "Dover Heights Public School",
-  "Drummoyne Public School",
-  "Dubbo College",
-  "Dulwich Hill High School",
-  "Earlwood Public School",
-  "East Hills Boys High School",
-  "East Hills Girls Technology High School",
-  "Eastwood High School",
-  "Emu Plains Public School",
-  "Engadine High School",
-  "Fairfield High School",
-  "Fairfield West Public School",
-  "Figtree High School",
-  "Forest High School",
-  "Gerringong Public School",
-  "Gosford High School",
-  "Granville Boys High School",
-  "Granville South Creative and Performing Arts High School",
-  "Greystanes High School",
-  "Gymea Technology High School",
-  "Hammondville Public School",
-  "Hawkesbury High School",
-  "Hornsby Girls High School",
-  "Hurlstone Agricultural High School",
-  "Illawarra Sports High School",
-  "Ingleburn High School",
-  "James Fallon High School",
-  "James Ruse Agricultural High School",
-  "Jannali High School",
-  "John Warby Public School",
-  "Katoomba High School",
-  "Kellyville Public School",
-  "Kemps Creek Public School",
-  "Kentlyn Public School",
-  "Kingsgrove High School",
-  "Kingswood High School",
-  "Kogarah High School",
-  "Lindfield Public School",
-  "Liverpool Boys High School",
-  "Liverpool Girls High School",
-  "Lismore High School",
-  "Lithgow High School",
-  "Londonderry Public School",
-  "Macarthur Anglican School",
-  "Macquarie Fields High School",
-  "Macquarie University High School",
-  "Marrickville High School",
-  "Marsden High School",
-  "Maroubra Bay High School",
-  "Menai High School",
-  "Merrylands High School",
-  "Mona Vale Public School",
-  "Moss Vale High School",
-  "Mount Druitt High School",
-  "Mount Saint Benedict College",
-  "Mudgee High School",
-  "Mullumbimby High School",
-  "Murrumbidgee Regional High School",
-  "Nepean High School",
-  "Neutral Bay Public School",
-  "Newcastle High School",
-  "Newington College",
-  "Normanhurst Boys High School",
-  "North Sydney Girls High School",
-  "North Sydney Boys High School",
-  "Northmead Creative and Performing Arts High School",
-  "Nowra High School",
-  "Oberon High School",
-  "Orange High School",
-  "Oxley High School",
-  "Parramatta High School",
-  "Penrith High School",
-  "Penshurst West Public School",
-  "Pymble Ladies' College",
-  "Queanbeyan High School",
-  "Randwick Girls' High School",
-  "Redfern Public School",
-  "Richmond High School",
-  "Riverstone High School",
-  "Rockdale High School",
-  "Rouse Hill High School",
-  "Ryde Secondary College",
-  "St George Girls High School",
-  "St Ives High School",
-  "St Marys Senior High School",
-  "St Patrick's College",
-  "Sutherland Shire Christian School",
-  "Sydney Technical High School",
-  "Sydney Secondary College",
-  "Tamworth High School",
-  "Tuggerah Lakes Secondary College",
-  "Turner Freeman",
-  "Ultimo Public School",
-  "Umina Beach Public School",
-  "Wahroonga Public School",
-  "Waverley College",
-  "Westfields Sports High School",
-  "Wollongong High School",
-  "Wyong High School",
-  "Yanco Agricultural High School",
-
-  // Catholic Schools
-  "St Joseph's College, Hunters Hill",
-  "Santa Sabina College",
-  "Loreto Normanhurst",
-  "Carmel Catholic College",
-  "Mount Saint Benedict College",
-  "Mary MacKillop College",
-  "St Vincent's College, Potts Point",
-  "St Ursula's College, Kingsgrove",
-  "Our Lady of Mercy College, Parramatta",
-  "Mercy Catholic College, Chatswood",
-  "All Saints Catholic College, Liverpool",
-  "Catholic Senior College, Liverpool",
-  "Marist College Eastwood",
-  "Marist Sisters' College, Woolwich",
-  "McAuley Catholic College, Grafton",
-
-  // Muslim Schools
-  "Malek Fahd Islamic School",
-  "Islamic College of Sydney",
-  "Australian International Academy",
-  "Australian Islamic College",
-  "Greenacre Muslim School",
-  "Zayed College for Girls",
-  "Wesley College (Muslim Campus)",
-  "Omar bin Al-Khattab College",
-  "Australian Muslim College",
-  "Nur Ul Islam School",
-  "Al Amanah College",
-  "Al Sadiq College",
-  "Al Noori Muslim School",
-  "Ibrahim Bin Adham College",
-  "Western Grammar School",
-  "AICS"
-];
-// Your Firebase config — get this from your Firebase Console > Project settings > General > Your apps > Firebase SDK snippet
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Reference to Firebase Auth service
-const auth = firebase.auth();
-
-// Sign up function
-function signIn(email, password) {
-  auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      alert("User signed in successfully!");
-      window.location.href = "dashboard.html";  // Redirect to account page
-    })
-    .catch(error => {
-      alert(error.message);
+    document.getElementById("photosInput").addEventListener("change", function() {
+      const files = Array.from(this.files).slice(0,5);
+      const previewContainer = document.getElementById("photoPreviews");
+      previewContainer.innerHTML = "";
+      files.forEach(file => {
+        const img = document.createElement("img");
+        img.className = "preview-img";
+        img.src = URL.createObjectURL(file);
+        previewContainer.appendChild(img);
+      });
     });
-}
 
+    document.getElementById("listingForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const school = document.getElementById("schoolInput").value.trim();
+      const size = document.getElementById("sizeInput").value.trim();
+      const gender = document.getElementById("genderInput").value;
+      const location = document.getElementById("locationInput").value.trim();
+      const price = document.getElementById("priceInput").value.trim();
+      const extra = document.getElementById("extraInput").value.trim();
+      const photoFiles = Array.from(document.getElementById("photosInput").files).slice(0,5);
 
-// Sign in function
-function signIn(email, password) {
-  auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      alert("User signed in successfully!");
-      // Update UI or redirect
-    })
-    .catch(error => {
-      alert(error.message);
+      if (!school || !size || !gender || !location || !price) {
+        alert("Please fill all required fields.");
+        return;
+      }
+      if(photoFiles.length === 0) {
+        alert("Please upload at least one photo.");
+        return;
+      }
+
+      const uploadedPhotos = [];
+      for (const file of photoFiles) {
+        const url = await uploadPhoto(file);
+        uploadedPhotos.push(url);
+      }
+
+      listings.push({
+        userId: currentUser.uid,
+        school, size, gender, location, price, extra,
+        photos: uploadedPhotos
+      });
+
+      localStorage.setItem("listings", JSON.stringify(listings));
+      alert("Listing submitted!");
+      this.reset();
+      document.getElementById("photoPreviews").innerHTML = "";
+      renderUserListings();
     });
-}
 
-// Sign out function
-function signOutUser() {
-  auth.signOut()
-    .then(() => {
-      alert("User signed out!");
-      // Update UI
-    });
-}
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+    window.signOutUser = function() {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    };
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
-    authDomain: "schooluniformsapp.firebaseapp.com",
-    projectId: "schooluniformsapp",
-    storageBucket: "schooluniformsapp.firebasestorage.app",
-    messagingSenderId: "660528209566",
-    appId: "1:660528209566:web:5c19e23b57ce2b8039258f",
-    measurementId: "G-7W5EPT691T"
-  };
+    window.deleteListing = function(index) {
+      if(confirm("Are you sure you want to delete this listing?")) {
+        listings.splice(index, 1);
+        localStorage.setItem("listings", JSON.stringify(listings));
+        renderUserListings();
+      }
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-// Inside your form submit event
-const user = firebase.auth().currentUser;
+    window.editListing = function(index) {
+      const listing = listings[index];
+      if (!listing) return alert("Listing not found.");
 
-const newListing = {
-  school: document.getElementById('schoolInput').value.trim(),
-  item: document.getElementById('itemInput').value,
-  size: document.getElementById('sizeInput').value.trim(),
-  condition: document.getElementById('conditionInput').value.trim(),
-  price: document.getElementById('priceInput').value.trim(),
-  userId: user ? user.uid : null, // attach user ID to listing
-};
+      // Prefill form for editing
+      document.getElementById("schoolInput").value = listing.school;
+      document.getElementById("sizeInput").value = listing.size;
+      document.getElementById("genderInput").value = listing.gender;
+      document.getElementById("locationInput").value = listing.location;
+      document.getElementById("priceInput").value = listing.price;
+      document.getElementById("extraInput").value = listing.extra || "";
+
+      // For simplicity, do not edit photos now (would require more UI)
+
+      // Remove old listing and wait for resubmission
+      listings.splice(index, 1);
+      localStorage.setItem("listings", JSON.stringify(listings));
+      renderUserListings();
+      alert("Edit the form and submit again.");
+    };
+  </script>
+</body>
+</html>
