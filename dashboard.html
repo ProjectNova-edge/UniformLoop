@@ -2,27 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>My Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Account - UniformLoop</title>
   <link rel="stylesheet" href="styles.css" />
+  
+  <!-- Cloudinary upload widget -->
+  <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
+  
+  <style>
+    /* Simple styling for image previews */
+    #uploaded_images_preview img {
+      width: 100px;
+      margin: 5px;
+      border-radius: 5px;
+    }
+    .card {
+      border: 1px solid #ccc;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 5px;
+      max-width: 400px;
+    }
+    .card img {
+      max-width: 80px;
+      margin-right: 5px;
+      border-radius: 3px;
+    }
+    .photos-container {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    button {
+      margin-right: 6px;
+      margin-top: 6px;
+    }
+  </style>
 </head>
 <body>
   <h1>Welcome to Your Dashboard</h1>
   <button onclick="signOutUser()">Logout</button>
 
-  <h2>Post a New Listing</h2>
+  <h2>Submit a New Listing</h2>
   <form id="listingForm">
     <input type="text" id="schoolInput" placeholder="School Name" required />
     <input type="text" id="sizeInput" placeholder="Size" required />
-    <select id="genderInput" required>
-      <option value="">Select Gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Unisex">Unisex</option>
-    </select>
-    <input type="text" id="locationInput" placeholder="Location" required />
-    <input type="text" id="priceInput" placeholder="Price (or Free)" required />
-    <textarea id="extraInput" placeholder="Extra Details (optional)"></textarea>
-    <input type="file" id="photoInput" accept="image/*" multiple required />
+    <input type="text" id="genderInput" placeholder="Gender (optional)" />
+    <input type="text" id="locationInput" placeholder="Location (optional)" />
+    <input type="text" id="priceInput" placeholder="Price or Free" required />
+    <textarea id="extraDetailsInput" placeholder="Extra Details (optional)"></textarea>
+    
+    <button type="button" id="upload_widget_opener">Upload Photos (up to 5)</button>
+    <div id="uploaded_images_preview"></div>
+    
+    <br />
     <button type="submit">Submit Listing</button>
   </form>
 
@@ -32,8 +65,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
+    // Firebase config - replace with your config
     const firebaseConfig = {
       apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
       authDomain: "schooluniformsapp.firebaseapp.com",
@@ -43,114 +76,200 @@
       appId: "1:660528209566:web:5c19e23b57ce2b8039258f"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const storage = getStorage(app);
 
-    let currentUser = null;
-    let allListings = JSON.parse(localStorage.getItem("listings")) || [];
+    let uploadedImages = [];
 
-    const form = document.getElementById("listingForm");
-    const container = document.getElementById("userListings");
+    // Cloudinary Upload Widget setup
+    const myWidget = cloudinary.createUploadWidget({
+      cloudName: 'dxm5twyl0', // your cloud name
+      uploadPreset: 'user_uploads', // your unsigned preset name
+      multiple: true,
+      maxFiles: 5,
+      folder: 'user_listings',
+      sources: ['local', 'url', 'camera'],
+      clientAllowedFormats: ['png', 'jpeg', 'jpg'],
+      maxFileSize: 2000000
+    }, (error, result) => {
+      if (!error && result && result.event === "success") {
+        uploadedImages.push(result.info.secure_url);
+        displayUploadedImages();
+      }
+    });
 
+    document.getElementById("upload_widget_opener").addEventListener("click", () => {
+      if(uploadedImages.length >= 5){
+        alert("Maximum 5 photos allowed.");
+        return;
+      }
+      myWidget.open();
+    });
+
+    function displayUploadedImages() {
+      const previewContainer = document.getElementById('uploaded_images_preview');
+      previewContainer.innerHTML = '';
+      uploadedImages.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        previewContainer.appendChild(img);
+      });
+    }
+
+    // Check user logged in or redirect
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        currentUser = user;
-        renderListings();
+        loadUserListings(user.uid);
       } else {
         window.location.href = "index.html";
       }
     });
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const files = document.getElementById("photoInput").files;
-      if (!files.length || files.length > 5) {
-        alert("Please select 1 to 5 photos.");
-        return;
-      }
-
-      const photoURLs = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const photoRef = storageRef(storage, `photos/${currentUser.uid}/${Date.now()}_${files[i].name}`);
-        const snapshot = await uploadBytes(photoRef, files[i]);
-        const url = await getDownloadURL(snapshot.ref);
-        photoURLs.push(url);
-      }
-
-      const newListing = {
-        id: Date.now(),
-        userId: currentUser.uid,
-        school: document.getElementById("schoolInput").value.trim(),
-        size: document.getElementById("sizeInput").value.trim(),
-        gender: document.getElementById("genderInput").value,
-        location: document.getElementById("locationInput").value.trim(),
-        price: document.getElementById("priceInput").value.trim(),
-        extra: document.getElementById("extraInput").value.trim(),
-        photoURLs
-      };
-
-      allListings.push(newListing);
-      localStorage.setItem("listings", JSON.stringify(allListings));
-      renderListings();
-      form.reset();
-    });
-
-    function renderListings() {
-      container.innerHTML = "";
-      const userListings = allListings.filter(listing => listing.userId === currentUser.uid);
+    // Load listings from localStorage filtered by userId
+    function loadUserListings(uid) {
+      const allListings = JSON.parse(localStorage.getItem("listings")) || [];
+      const userListings = allListings.filter(item => item.userId === uid);
+      const container = document.getElementById("userListings");
+      container.innerHTML = '';
 
       if (userListings.length === 0) {
         container.innerHTML = "<p>No listings yet.</p>";
         return;
       }
 
-      userListings.forEach(listing => {
+      userListings.forEach((listing, index) => {
         const div = document.createElement("div");
         div.className = "card";
+
+        // Images display
+        let photosHTML = '<div class="photos-container">';
+        if(listing.photos && listing.photos.length){
+          listing.photos.forEach(photoURL => {
+            photosHTML += `<img src="${photoURL}" alt="Listing photo" />`;
+          });
+        }
+        photosHTML += '</div>';
+
         div.innerHTML = `
-          ${listing.photoURLs.map(url => `<img src="${url}" alt="Item photo" style="max-width:150px;" />`).join('')}
           <h3>${listing.school}</h3>
           <p><strong>Size:</strong> ${listing.size}</p>
-          <p><strong>Gender:</strong> ${listing.gender}</p>
-          <p><strong>Location:</strong> ${listing.location}</p>
+          <p><strong>Gender:</strong> ${listing.gender || 'N/A'}</p>
+          <p><strong>Location:</strong> ${listing.location || 'N/A'}</p>
           <p><strong>Price:</strong> ${listing.price}</p>
-          ${listing.extra ? `<p><strong>Extra:</strong> ${listing.extra}</p>` : ""}
-          <button onclick="editListing(${listing.id})">Edit</button>
-          <button onclick="deleteListing(${listing.id})">Delete</button>
+          <p><strong>Extra Details:</strong> ${listing.extraDetails || 'None'}</p>
+          ${photosHTML}
+          <button data-index="${index}" class="edit-btn">Edit</button> 
+          <button data-index="${index}" class="delete-btn">Delete</button>
         `;
+
         container.appendChild(div);
+      });
+
+      // Attach event listeners for edit and delete buttons
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = e.target.getAttribute('data-index');
+          deleteListing(index);
+        });
+      });
+
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = e.target.getAttribute('data-index');
+          editListing(index);
+        });
       });
     }
 
-    window.deleteListing = function(id) {
-      allListings = allListings.filter(item => item.id !== id);
+    // Delete listing
+    function deleteListing(index) {
+      const user = auth.currentUser;
+      if(!user) return alert("User not authenticated.");
+
+      let allListings = JSON.parse(localStorage.getItem("listings")) || [];
+      const userListings = allListings.filter(item => item.userId === user.uid);
+
+      if(index < 0 || index >= userListings.length) return;
+
+      // Remove from allListings by matching userId and index in filtered array
+      let count = -1;
+      allListings = allListings.filter(item => {
+        if(item.userId === user.uid){
+          count++;
+          return count !== Number(index);
+        }
+        return true;
+      });
+
       localStorage.setItem("listings", JSON.stringify(allListings));
-      renderListings();
-    };
+      loadUserListings(user.uid);
+    }
 
-    window.editListing = function(id) {
-      const listing = allListings.find(item => item.id === id);
-      if (listing) {
-        document.getElementById("schoolInput").value = listing.school;
-        document.getElementById("sizeInput").value = listing.size;
-        document.getElementById("genderInput").value = listing.gender;
-        document.getElementById("locationInput").value = listing.location;
-        document.getElementById("priceInput").value = listing.price;
-        document.getElementById("extraInput").value = listing.extra;
-        deleteListing(id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    };
+    // Edit listing - simple implementation: loads listing into form and deletes old
+    function editListing(index) {
+      const user = auth.currentUser;
+      if(!user) return alert("User not authenticated.");
 
-    window.signOutUser = function () {
+      let allListings = JSON.parse(localStorage.getItem("listings")) || [];
+      const userListings = allListings.filter(item => item.userId === user.uid);
+
+      if(index < 0 || index >= userListings.length) return;
+
+      const listingToEdit = userListings[index];
+
+      // Fill form with existing data
+      document.getElementById('schoolInput').value = listingToEdit.school;
+      document.getElementById('sizeInput').value = listingToEdit.size;
+      document.getElementById('genderInput').value = listingToEdit.gender || '';
+      document.getElementById('locationInput').value = listingToEdit.location || '';
+      document.getElementById('priceInput').value = listingToEdit.price;
+      document.getElementById('extraDetailsInput').value = listingToEdit.extraDetails || '';
+      uploadedImages = listingToEdit.photos || [];
+      displayUploadedImages();
+
+      // Delete old listing so that new submit updates it
+      deleteListing(index);
+    }
+
+    // Handle listing form submission
+    document.getElementById('listingForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const user = auth.currentUser;
+      if(!user) return alert("User not authenticated.");
+
+      const newListing = {
+        school: document.getElementById('schoolInput').value.trim(),
+        size: document.getElementById('sizeInput').value.trim(),
+        gender: document.getElementById('genderInput').value.trim(),
+        location: document.getElementById('locationInput').value.trim(),
+        price: document.getElementById('priceInput').value.trim(),
+        extraDetails: document.getElementById('extraDetailsInput').value.trim(),
+        photos: uploadedImages,
+        userId: user.uid,
+      };
+
+      // Save to localStorage
+      let allListings = JSON.parse(localStorage.getItem("listings")) || [];
+      allListings.push(newListing);
+      localStorage.setItem("listings", JSON.stringify(allListings));
+
+      // Reset form and images
+      e.target.reset();
+      uploadedImages = [];
+      displayUploadedImages();
+
+      loadUserListings(user.uid);
+      alert("Listing saved!");
+    });
+
+    // Logout function
+    window.signOutUser = function() {
       signOut(auth).then(() => {
         window.location.href = "index.html";
       });
     };
   </script>
-  <script src="https://widget.cloudinary.com/v2.0/global/all.js" type="text/javascript"></script>
 </body>
 </html>
