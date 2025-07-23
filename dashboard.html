@@ -90,7 +90,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-    // Firebase config
+    // Firebase config - replace with your config
     const firebaseConfig = {
       apiKey: "AIzaSyCF35AKe2AHRXaXX_0d3lQi9bpqM_C2NaQ",
       authDomain: "schooluniformsapp.firebaseapp.com",
@@ -108,18 +108,21 @@
 
     // Cloudinary Upload Widget setup
     const myWidget = cloudinary.createUploadWidget({
-      cloudName: 'dxm5twyl0', // your cloud name
-      uploadPreset: 'user_uploads', // your unsigned preset name
+      cloudName: 'dxm5twyl0',        // your Cloudinary cloud name
+      uploadPreset: 'Uniform Photos', // EXACTLY your unsigned preset name
       multiple: true,
       maxFiles: 5,
-      folder: 'user_listings',
+      folder: 'School Uniforms',      // matches your asset folder
       sources: ['local', 'url', 'camera'],
       clientAllowedFormats: ['png', 'jpeg', 'jpg'],
       maxFileSize: 2000000
     }, (error, result) => {
       if (!error && result && result.event === "success") {
+        console.log("Uploaded image URL:", result.info.secure_url);
         uploadedImages.push(result.info.secure_url);
         displayUploadedImages();
+      } else if(error) {
+        console.error("Upload Widget Error:", error);
       }
     });
 
